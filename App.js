@@ -4,18 +4,22 @@ import * as ImagePicker from 'expo-image-picker';
 
 export default function App() {
 
+    //ip
+    const ip='http://10.10.0.176';
+
   //Para los states de la app
   const [categoria, setCategoria] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
-  const [idCategoria, setIdCategoria]=useState("")
+  const [idCategoria, setIdCategoria]=useState(null)
   const [dataCategoria, setDataCategoria] = useState([]);
   const [imagen, setImagen] = useState(null);
 
   //Funcionalidad para hacer el insert
   const handleCreate = async () => {
-
-    console.log("HANDLE CREATE...")
+    //Verificar si es create o update
+//const action="";
+    (idCategoria === null ) ? action="createRow" : action ="updateRow"
     //logica para guardar imagen
     let localUri=imagen
     let fileName=""
@@ -44,15 +48,13 @@ console.log("FormData_parts ", formData._parts)
 console.log("\n -------------- FIN formDATA ----------\n")     
     try {
         //utilizar la direccion IP del servidor y no localhost
-        console.log("ANTES DE HACER EL FETCH...")
-        const response = await fetch('http://192.168.1.2/coffeeshop/api/services/admin/categoria.php?action=createRow', {
+        const response = await fetch(`${ip}/coffeeshop/api/services/admin/categoria.php?action=createRow`, {
             method: 'POST',
             body: formData
         });
-
-        console.log("Despues del Fetch valor response...\n", response.status)
+        //console.log("Despues del Fetch valor response...\n", response.status)
         const data = response;
-        console.log("Despues del Fetch...\n", data)
+        //console.log("Despues del Fetch...\n", data)
         if (data.status) {
             Alert.alert('Datos Guardados correctamente');
         } else {
@@ -68,7 +70,7 @@ const getCategorias = async () => {
   try {
       //utilizar la direccion IP del servidor y no localhost
 
-      const response = await fetch('http://192.168.1.2/coffeeshop/api/services/admin/categoria.php?action=readAll', {
+      const response = await fetch(`${ip}/coffeeshop/api/services/admin/categoria.php?action=readAll`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
       });
@@ -114,7 +116,7 @@ const deleteCategoria= async(id)=>{
     formData.append('idCategoria', id);
     try {
         //utilizar la direccion IP del servidor y no localhost
-        const response = await fetch('http://192.168.1.2/coffeeshop/api/services/admin/categoria.php?action=deleteRow', {
+        const response = await fetch(`${ip}/coffeeshop/api/services/admin/categoria.php?action=deleteRow`, {
             method: 'POST',
             body: formData
         });
@@ -126,25 +128,12 @@ const deleteCategoria= async(id)=>{
             Alert.alert('Error', data.error);
         }
 
-        //logica para actualizar
-
-        const formData = new FormData();
-        formData.append('nombreCategoria', categoria);
-        formData.append('descripcionCategoria', descripcion);
-        formData.append('imagenCategoria',     {
-            uri: localUri,
-            name: fileName,
-            type
-        });   
-
-
-
     } catch (error) {
         Alert.alert('Ocurrió un error al intentar eliminar la categoria');
     }
 }
 
-const updateCategoria = async (id)=>{
+const updateCategoria = async(id)=>{
 
     //primero tengo que obtener la categoria a editar
 //http://192.168.1.2/coffeeshop/api/services/admin/categoria.php?action=readOne
@@ -158,21 +147,29 @@ const updateCategoria = async (id)=>{
         "descripcion_categoria": "una descripcions"
     },
 */
-
+console.log("Ejecutando update \n", id)
+const formData = new FormData();
+formData.append('idCategoria', id);
 try {
-    const response = await fetch('http://192.168.1.2/coffeeshop/api/services/admin/categoria.php?action=deleteRow', {
+
+    const response = await fetch(`${ip}/coffeeshop/api/services/admin/categoria.php?action=readOne`, {
         method: 'POST',
         body: formData
     });
-    const data = response;
+
+    const data = await response.json();
+    console.log("valor de data \n", data)
+    console.log("Data status dataset \n", data.dataset)
     if (data.status) {
         setIdCategoria(data.dataset.id_categoria)
         setCategoria(data.dataset.nombre_categoria)
         setDescripcion(data.dataset.descripcion_categoria)
-        setImagen(data.dataset.descripcion_categoria)
+        setImagen(data.dataset.imagen_categoria)
+        setModalVisible(true);
     } else {
         Alert.alert('Error al obtener los datos', data.error);
     }
+    
     
 } catch (error) {
     Alert.alert('Ocurrió un error al intentar editar la categoria');
@@ -231,16 +228,17 @@ try {
 
 !categoria ? <Text> No hay categorias</Text> : 
 
-       (<View>
-            <View style={styles.vista}>
-                <View key={categoria.id_categoria}>
+       (<View key={categoria.id_categoria}>
+            <View style={styles.vista} >
+                <View >
                     <Text >{categoria.nombre_categoria}</Text>
                     <Text >{categoria.descripcion_categoria}</Text>
                     <View>
                     <TouchableOpacity style={styles.buttonDelete} onPress={() => deleteCategoria(categoria.id_categoria)}>
-                        <Text>Eliminar Categoria</Text>
+                        <Text style={styles.buttonText}>Eliminar Categoria</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.buttonUpdate} onPress={() => updateCategoria(categoria.id_categoria)}>
+                    <TouchableOpacity style={styles.buttonUpdate} 
+                    onPress={() => updateCategoria(categoria.id_categoria)}>
                         <Text>Editar Categoria</Text>
                     </TouchableOpacity>
                     </View>
@@ -304,7 +302,7 @@ const styles = StyleSheet.create({
       width: 200,
       borderRadius: 10,
       backgroundColor: "darkblue",
-      marginTop: 100,
+      marginTop: 10,
       height: 50,
       padding: 10
   },
@@ -367,10 +365,10 @@ display:"flex",
   },  buttonDelete: {
     borderWidth: 2,
     borderColor: "black",
-    width: 200,
+    width: 175,
     borderRadius: 10,
     backgroundColor: "red",
-    marginTop: 100,
+    marginTop: 10,
     height: 50,
     padding: 10,
     color:"white",
@@ -379,13 +377,13 @@ display:"flex",
 buttonUpdate: {
     borderWidth: 2,
     borderColor: "black",
-    width: 200,
+    width: 175,
     borderRadius: 10,
-    backgroundColor: "red",
-    marginTop: 100,
+    backgroundColor: "orange",
+    marginTop: 10,
     height: 50,
     padding: 10,
-    color:"white",
+    color:"#FFF",
     fontSize:15
 },
 scrollContainer: {
