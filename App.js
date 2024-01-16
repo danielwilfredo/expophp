@@ -4,13 +4,14 @@ import * as ImagePicker from 'expo-image-picker';
 
 export default function App() {
 
-    //ip
-    const ip='http://10.10.0.176';
+    //ip const ip='http://10.10.0.176';
+    const ip='http://192.168.1.2';
 
   //Para los states de la app
   const [categoria, setCategoria] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const [updateModalVisible, setUpdateModalVisible] = useState(false);
   const [idCategoria, setIdCategoria]=useState(null)
   const [dataCategoria, setDataCategoria] = useState([]);
   const [imagen, setImagen] = useState(null);
@@ -165,7 +166,7 @@ try {
         setCategoria(data.dataset.nombre_categoria)
         setDescripcion(data.dataset.descripcion_categoria)
         setImagen(data.dataset.imagen_categoria)
-        setModalVisible(true);
+        setUpdateModalVisible(true);
     } else {
         Alert.alert('Error al obtener los datos', data.error);
     }
@@ -175,6 +176,53 @@ try {
     Alert.alert('Ocurrió un error al intentar editar la categoria');
 }
 
+
+}
+
+const handleUpdate = async (id) =>{
+
+    let localUri=""
+    let fileName=""
+    let match=""
+    let type=""
+    imagen ? localUri=imagen : fileName=imagen
+
+    if(localUri== null || localUri=="")
+    {
+      Alert.alert("Selecciona una iamgen")
+    }
+    else{
+        fileName ? fileName=imagen : fileName=localUri.split('/').pop()
+      match=/\.(\w+)$/.exec(fileName)
+      type= match ? `image/${match[1]}` : `image`
+    }
+    const formData = new FormData();
+    formData.append('idCategoria', id);
+    formData.append('nombreCategoria', categoria);
+    formData.append('descripcionCategoria', descripcion);
+    formData.append('imagenCategoria',     {
+        uri: localUri,
+        name: fileName,
+        type
+    });   
+   
+    try {
+        //utilizar la direccion IP del servidor y no localhost
+        const response = await fetch(`${ip}/coffeeshop/api/services/admin/categoria.php?action=updateRow`, {
+            method: 'POST',
+            body: formData
+        });
+        //console.log("Despues del Fetch valor response...\n", response.status)
+        const data = response;
+        //console.log("Despues del Fetch...\n", data)
+        if (data.status) {
+            Alert.alert('Datos actualizados correctamente');
+        } else {
+            Alert.alert('Error', data.error);
+        }
+    } catch (error) {
+        Alert.alert('Ocurrió un error al intentar editar la categoria');
+    }
 
 }
 
@@ -193,6 +241,13 @@ try {
             <View style={styles.modalView}>
                 <Text style={styles.modalText}>Nuevo Registro</Text>
                 <View style={styles.container}>
+                {imagen && (
+                <Image
+                source={{uri: imagen}}
+                style={{ width: 100, height: 100, borderRadius: 50 }}
+                onError={(error) => console.error("Error al cargar la imagen:", error)}
+              />
+                )} 
                     <Text>Nombre Categoria</Text>
                     <TextInput style={styles.input}
                      value={categoria} 
@@ -222,6 +277,56 @@ try {
             </View>
         </View>
     </Modal>
+
+    <Modal
+        animationType="slide"
+        transparent={true}
+        visible={updateModalVisible}
+        onRequestClose={() => {
+            Alert.alert('Modal has been closed.');
+            setUpdateModalVisible(!updateModalVisible);
+        }}>
+        <View style={styles.centeredView}>
+            <View style={styles.modalView}>
+                <Text style={styles.modalText}>Editar Registro</Text>
+                <View style={styles.container}>
+                {imagen && (
+                <Image
+                source={{uri: imagen}}
+                style={{ width: 100, height: 100, borderRadius: 50 }}
+                onError={(error) => console.error("Error al cargar la imagen:", error)}
+              />
+                )} 
+                    <Text>Nombre Categoria</Text>
+                    <TextInput style={styles.input}
+                     value={categoria} 
+                     onChangeText={setCategoria}
+                      placeholder='Categoria...' />
+
+                    <Text>Descripción Categoria</Text>
+                    <TextInput style={styles.input} value={descripcion} 
+                    placeholder='Descripcion...'
+                     onChangeText={setDescripcion} />
+
+                    <Text>Seleccionar imagen</Text>
+                    <TouchableOpacity style={styles.loadImageButton} 
+                    title="Escoge una foto de tu librería" 
+                    onPress={openGalery}>
+
+                <Text style={styles.buttonText}>Cargar Imagen</Text>
+            </TouchableOpacity>
+                    <TouchableOpacity style={styles.button}
+                    onPress={()=>handleUpdate(idCategoria)}><Text style={styles.buttonText}>Crear nueva categoria</Text></TouchableOpacity>
+                </View>
+
+                <Pressable
+                    style={[styles.button, styles.buttonClose]}
+                    onPress={() => setUpdateModalVisible(!updateModalVisible)}>
+                    <Text style={styles.textStyle}>Cerrar</Text>
+                </Pressable>
+            </View>
+        </View>
+    </Modal>
     <ScrollView contentContainerStyle={styles.scrollContainer}>
     <Text style={styles.textStyle}>Categorias:</Text>
     {dataCategoria.map((categoria) => (
@@ -230,7 +335,15 @@ try {
 
        (<View key={categoria.id_categoria}>
             <View style={styles.vista} >
-                <View >
+                <View>
+                {categoria.imagen_categoria && (
+                    <Image
+  source={{ uri: `${ip}/coffeeshop/api/images/categorias/${categoria.imagen_categoria}` }}
+  style={{ width: 50, height: 50, borderRadius: 50 }}
+  onError={(error) => console.error("Error al cargar la imagen:", error)}
+/>
+        )
+        }
                     <Text >{categoria.nombre_categoria}</Text>
                     <Text >{categoria.descripcion_categoria}</Text>
                     <View>
@@ -294,7 +407,7 @@ const styles = StyleSheet.create({
       width: 100,
       borderRadius: 10,
       backgroundColor: "darkblue",
-      marginTop: 25
+      marginTop: 5
   },
   buttonCreate: {
       borderWidth: 2,
