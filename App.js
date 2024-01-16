@@ -15,6 +15,7 @@ export default function App() {
   const [idCategoria, setIdCategoria]=useState(null)
   const [dataCategoria, setDataCategoria] = useState([]);
   const [imagen, setImagen] = useState(null);
+  const [updateImg, setUpdateImg]=useState(null);
 
   //Funcionalidad para hacer el insert
   const handleCreate = async () => {
@@ -137,18 +138,7 @@ const deleteCategoria= async(id)=>{
 const updateCategoria = async(id)=>{
 
     //primero tengo que obtener la categoria a editar
-//http://192.168.1.2/coffeeshop/api/services/admin/categoria.php?action=readOne
 
-
-/*
-   "dataset": {
-        "id_categoria": 17,
-        "nombre_categoria": "categoria postman2",
-        "imagen_categoria": "65a499579e08a.png",
-        "descripcion_categoria": "una descripcions"
-    },
-*/
-console.log("Ejecutando update \n", id)
 const formData = new FormData();
 formData.append('idCategoria', id);
 try {
@@ -159,18 +149,19 @@ try {
     });
 
     const data = await response.json();
-    console.log("valor de data \n", data)
-    console.log("Data status dataset \n", data.dataset)
+    const datos=data.dataset
     if (data.status) {
-        setIdCategoria(data.dataset.id_categoria)
-        setCategoria(data.dataset.nombre_categoria)
-        setDescripcion(data.dataset.descripcion_categoria)
-        setImagen(data.dataset.imagen_categoria)
-        setUpdateModalVisible(true);
+        setIdCategoria(datos.id_categoria)
+        setCategoria(datos.nombre_categoria)
+        setDescripcion(datos.descripcion_categoria)
+        setImagen(datos.imagen_categoria)
+        setUpdateImg(datos.imagen_categoria)
+        console.log("En obtener categoria valor de img: \n", datos.imagen_categoria)
+        
     } else {
         Alert.alert('Error al obtener los datos', data.error);
     }
-    
+    setUpdateModalVisible(true);
     
 } catch (error) {
     Alert.alert('Ocurrió un error al intentar editar la categoria');
@@ -181,18 +172,21 @@ try {
 
 const handleUpdate = async (id) =>{
 
+    console.log("Valor de imagen en el editar: \n", imagen)
+
     let localUri=""
     let fileName=""
     let match=""
     let type=""
-    imagen ? localUri=imagen : fileName=imagen
+
+   localUri=`${ip}/coffeeshop/api/images/categorias/${imagen}` 
 
     if(localUri== null || localUri=="")
     {
       Alert.alert("Selecciona una iamgen")
     }
     else{
-        fileName ? fileName=imagen : fileName=localUri.split('/').pop()
+    fileName=localUri.split('/').pop()
       match=/\.(\w+)$/.exec(fileName)
       type= match ? `image/${match[1]}` : `image`
     }
@@ -200,7 +194,7 @@ const handleUpdate = async (id) =>{
     formData.append('idCategoria', id);
     formData.append('nombreCategoria', categoria);
     formData.append('descripcionCategoria', descripcion);
-    formData.append('imagenCategoria',     {
+    formData.append('imagenCategoria', {
         uri: localUri,
         name: fileName,
         type
@@ -293,7 +287,7 @@ const handleUpdate = async (id) =>{
                 {imagen && (
                 <Image
                 source={{uri: imagen}}
-                style={{ width: 100, height: 100, borderRadius: 50 }}
+                style={{ width: 50, height: 50, borderRadius: 50 }}
                 onError={(error) => console.error("Error al cargar la imagen:", error)}
               />
                 )} 
@@ -316,7 +310,7 @@ const handleUpdate = async (id) =>{
                 <Text style={styles.buttonText}>Cargar Imagen</Text>
             </TouchableOpacity>
                     <TouchableOpacity style={styles.button}
-                    onPress={()=>handleUpdate(idCategoria)}><Text style={styles.buttonText}>Crear nueva categoria</Text></TouchableOpacity>
+                    onPress={()=>handleUpdate(idCategoria)}><Text style={styles.buttonText}>Editar categoria</Text></TouchableOpacity>
                 </View>
 
                 <Pressable
