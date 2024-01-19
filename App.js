@@ -4,8 +4,8 @@ import * as ImagePicker from 'expo-image-picker';
 
 export default function App() {
 
-    //ip const ip='http://10.10.0.176';
-    const ip = 'http://192.168.1.2';
+    const ip = 'http://10.10.0.168';
+    //const ip = 'http://192.168.1.2';
 
     //Para los states de la app
     const [categoria, setCategoria] = useState("");
@@ -16,6 +16,14 @@ export default function App() {
     const [dataCategoria, setDataCategoria] = useState([]);
     const [imagen, setImagen] = useState(null);
     const [updateImg, setUpdateImg] = useState(null);
+
+    const cleanState = () => {
+        setCategoria("");
+        setDescripcion("");
+        setIdCategoria(null)
+        setImagen(null)
+        setUpdateImg(null);
+    }
 
     //Funcionalidad para hacer el insert
     const handleCreate = async () => {
@@ -58,6 +66,9 @@ export default function App() {
             //console.log("Despues del Fetch...\n", data)
             if (data.status) {
                 Alert.alert('Datos Guardados correctamente');
+                cleanState();
+                getCategorias();
+
             } else {
                 Alert.alert('Error', data.error);
             }
@@ -107,6 +118,7 @@ export default function App() {
 
         if (!result.canceled) {
             setImagen(result.assets[0].uri);
+            setUpdateImg(result.assets[0].uri);
             console.log("Valor enviado a imagen \n", result.assets[0].uri)
         }
     };
@@ -125,6 +137,7 @@ export default function App() {
             if (data.status) {
                 Alert.alert('Categoria Eliminada');
                 getCategorias();
+                cleanState();
             } else {
                 Alert.alert('Error', data.error);
             }
@@ -149,8 +162,7 @@ export default function App() {
                 setIdCategoria(datos.id_categoria)
                 setCategoria(datos.nombre_categoria)
                 setDescripcion(datos.descripcion_categoria)
-                setImagen(datos.imagen_categoria)
-                setUpdateImg(datos.imagen_categoria)
+                setImagen(`${ip}/coffeeshop/api/images/categorias/${datos.imagen_categoria}`)
             } else {
                 Alert.alert('Error al obtener los datos', data.error);
             }
@@ -172,8 +184,13 @@ export default function App() {
         let match = ""
         let type = ""
 
+        // if(updateImg!=null) localUri=updateImg 
+        //else localUri=imagen
+
+        updateImg != null ? localUri = updateImg : localUri = imagen
+
         //si no se manda imagen
-        localUri = `${ip}/coffeeshop/api/images/categorias/${imagen}`
+        //localUri = `${ip}/coffeeshop/api/images/categorias/${imagen}`
 
         if (localUri == null || localUri == "") {
             Alert.alert("Selecciona una iamgen")
@@ -183,6 +200,9 @@ export default function App() {
             match = /\.(\w+)$/.exec(fileName)
             type = match ? `image/${match[1]}` : `image`
         }
+        console.log("Valor de id update: ", idCategoria)
+        console.log("Valor de categoria update: \n", categoria)
+        console.log("Valor de descripcion update: \n", descripcion)
         const formData = new FormData();
         formData.append('idCategoria', idCategoria);
         formData.append('nombreCategoria', categoria);
@@ -204,6 +224,8 @@ export default function App() {
             //console.log("Despues del Fetch...\n", data)
             if (data.status) {
                 Alert.alert('Datos actualizados correctamente');
+                getCategorias();
+                cleanState();
             } else {
                 Alert.alert('Error', data.error);
             }
