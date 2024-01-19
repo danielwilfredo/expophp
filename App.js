@@ -1,22 +1,38 @@
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Modal, Pressable, Image, ScrollView } from 'react-native';
 import { useState, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import axios from 'axios';
 
 export default function App() {
 
-    const ip = 'http://10.10.0.168';
-    //const ip = 'http://192.168.1.2';
+    //const ip = 'http://10.10.0.168';
+    const ip = 'http://192.168.1.2';
 
     //Para los states de la app
+    // Definir un estado 'categoria' con su respectiva función de actualización 'setCategoria'
     const [categoria, setCategoria] = useState("");
+
+    // Definir un estado 'descripcion' con su respectiva función de actualización 'setDescripcion'
     const [descripcion, setDescripcion] = useState("");
+
+    // Definir un estado 'modalVisible' con su respectiva función de actualización 'setModalVisible'
     const [modalVisible, setModalVisible] = useState(false);
+
+    // Definir un estado 'updateModalVisible' con su respectiva función de actualización 'setUpdateModalVisible'
     const [updateModalVisible, setUpdateModalVisible] = useState(false);
-    const [idCategoria, setIdCategoria] = useState(null)
+
+    // Definir un estado 'idCategoria' con su respectiva función de actualización 'setIdCategoria'
+    const [idCategoria, setIdCategoria] = useState(null);
+
+    // Definir un estado 'dataCategoria' con su respectiva función de actualización 'setDataCategoria'
     const [dataCategoria, setDataCategoria] = useState([]);
+    // Definir un estado 'imagen' con su respectiva función de actualización 'setImagen'
     const [imagen, setImagen] = useState(null);
+
+    // Definir un estado 'updateImg' con su respectiva función de actualización 'setUpdateImg'
     const [updateImg, setUpdateImg] = useState(null);
 
+    // Definir una función 'cleanState' que restablece todos los estados a sus valores iniciales
     const cleanState = () => {
         setCategoria("");
         setDescripcion("");
@@ -25,49 +41,86 @@ export default function App() {
         setUpdateImg(null);
     }
 
-    //Funcionalidad para hacer el insert
+    //handleCreate Funcion para manejar la peticion POST para hacer el insert de los datos en la API
     const handleCreate = async () => {
-        //Verificar si es create o update
-        //const action="";
-        //(idCategoria === null ) ? action="createRow" : action ="updateRow"
         //logica para guardar imagen
         let localUri = imagen
         let fileName = ""
         let match = ""
         let type = ""
-        if (localUri == null || localUri == "") {
-            Alert.alert("Selecciona una iamgen")
-        }
+        if (localUri == null || localUri == "") Alert.alert("Selecciona una iamgen")
         else {
+            // Extraer el nombre del archivo de la URL localUri
+            /* Esta línea de código toma la URL almacenada en la variable localUri, la divide en segmentos utilizando '/'
+            como delimitador y luego toma el último segmento usando pop(). Esto se hace para extraer el nombre del archivo de la URL. */
             fileName = localUri.split('/').pop();
-            match = /\.(\w+)$/.exec(fileName)
-            type = match ? `image/${match[1]}` : `image`
-        }
 
+            // Buscar una coincidencia para la extensión del archivo en fileName
+            /*
+            se utiliza una expresión regular (/\.(\w+)$/) para buscar una coincidencia en el nombre del archivo (fileName). 
+            La expresión regular busca una secuencia de caracteres que comienza con un punto (.) 
+            seguido de uno o más caracteres de palabra (\w+), representando la extensión del archivo. 
+            El resultado de exec() es un array que contiene la cadena coincidente y los grupos capturados.
+            En este caso, estamos interesados en el segundo grupo capturado, que es la extensión del archivo. */
+            match = /\.(\w+)$/.exec(fileName);
+
+            // Determinar el tipo de archivo (MIME type)
+            /*
+            se utiliza un operador ternario para determinar el tipo de archivo (MIME type). Si match existe (es decir, 
+            si se encontró una coincidencia con la expresión regular), entonces type se establece como image/ 
+            seguido de la extensión del archivo obtenida del grupo capturado por la expresión regular (match[1]). 
+            Si no hay coincidencia, se establece type como simplemente "image". En resumen, 
+            esta línea de código se utiliza para determinar el tipo MIME del archivo, que es útil al enviar archivos 
+            en una solicitud HTTP, especialmente cuando se trata de imágenes.
+            */
+            type = match ? `image/${match[1]}` : `image`;
+        }
+        /* crea una nueva instancia de la clase FormData en JavaScript. 
+        FormData es un objeto que se utiliza para construir fácilmente conjuntos de pares clave/valor que representan datos de formulario,
+        que luego se pueden enviar a través de una solicitud HTTP, por ejemplo, al realizar una petición POST. */
         const formData = new FormData();
+        // Agregar el nombre de la categoría al objeto FormData
+        /*
+        Aquí se agrega un par clave-valor al objeto FormData. La clave es 'nombreCategoria', y el valor es el contenido de la 
+        variable categoria. Esto se utiliza para enviar el nombre de la categoría como parte de la solicitud.
+        */
         formData.append('nombreCategoria', categoria);
+        
+        // Agregar la descripción de la categoría al objeto FormData
+        /*
+        De manera similar al paso anterior, se agrega otro par clave-valor al objeto FormData. La clave es 'descripcionCategoria',
+         y el valor es el contenido de la variable descripcion. Esto se utiliza para enviar la descripción de la categoría como parte de la solicitud.
+         */
         formData.append('descripcionCategoria', descripcion);
+
+        // Agregar información sobre la imagen al objeto FormData
+        /*En este caso, en lugar de agregar un simple valor, se agrega un objeto más complejo al objeto FormData. 
+        Este objeto representa información sobre la imagen asociada a la categoría. Contiene tres propiedades: 'uri' 
+        (la URL o ruta local de la imagen), 'name' (el nombre del archivo) y 'type' (el tipo MIME del archivo).
+        Este último paso es común cuando se trabaja con archivos en JavaScript, y en este caso, se utiliza para adjuntar 
+        la información de la imagen al objeto FormData, lo que permite enviar archivos junto con otros datos en una solicitud HTTP.
+        */
         formData.append('imagenCategoria', {
             uri: localUri,
             name: fileName,
             type
         });
-        //console.log(" \n-------------- Este es el formDATA ----------\n")        
-        //console.log("FormData_parts ", formData._parts)
-        //console.log("\n -------------- FIN formDATA ----------\n")     
+
+
         try {
             //utilizar la direccion IP del servidor y no localhost
             const response = await fetch(`${ip}/coffeeshop/api/services/admin/categoria.php?action=createRow`, {
                 method: 'POST',
                 body: formData
             });
-            //console.log("Despues del Fetch valor response...\n", response.status)
+
             const data = response;
-            //console.log("Despues del Fetch...\n", data)
+
             if (data.status) {
                 Alert.alert('Datos Guardados correctamente');
                 cleanState();
                 getCategorias();
+                setModalVisible(false);
 
             } else {
                 Alert.alert('Error', data.error);
@@ -77,18 +130,16 @@ export default function App() {
         }
     };
 
-    //Funcionalidad para listar las categorias
+    //getCategorias Funcion para consultar por medio de una peticion GET los datos de la tabla categoria que se encuentran en la base de datos
     const getCategorias = async () => {
         try {
             //utilizar la direccion IP del servidor y no localhost
-
             const response = await fetch(`${ip}/coffeeshop/api/services/admin/categoria.php?action=readAll`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
 
             const data = await response.json();
-
             console.log("data al obtener categorias  \n", data)
             if (data.status) {
                 setDataCategoria(data.dataset)
@@ -103,28 +154,62 @@ export default function App() {
         }
     }
 
+    //Uso del React Hook UseEffect para que cada vez que se cargue la vista por primera vez
+    //se ejecute la funcion getCategorias
     useEffect(() => {
         getCategorias()
     }, []);
 
     //funcionalidad para guardar la imagen
     const openGalery = async () => {
+        // Lanza la interfaz de selección de imágenes de la biblioteca de imágenes de Expo
         let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.All,
-            allowsEditing: false,
-            aspect: [8, 8],
-            quality: 1,
+            mediaTypes: ImagePicker.MediaTypeOptions.All, // Permite seleccionar cualquier tipo de archivo multimedia
+            allowsEditing: false, // No permite la edición de la imagen seleccionada
+            aspect: [8, 8], // Proporción de aspecto para la imagen seleccionada
+            quality: 1, // Calidad de la imagen (valor entre 0 y 1)
         });
-
+    
         if (!result.canceled) {
-            setImagen(result.assets[0].uri);
-            setUpdateImg(result.assets[0].uri);
-            console.log("Valor enviado a imagen \n", result.assets[0].uri)
+            const imageWidth = result.assets[0].width;
+            const imageHeight = result.assets[0].height;
+    
+            // Validar que las dimensiones de la imagen no sean mayores que 500x500 píxeles
+            if (imageWidth <= 500 && imageHeight <= 500) {
+                // Establece la imagen en el estado 'imagen'
+                setImagen(result.assets[0].uri);
+                // Establece la imagen en el estado 'updateImg'
+                setUpdateImg(result.assets[0].uri);
+                // Imprime en la consola la URI de la imagen seleccionada
+                console.log("Valor enviado a imagen \n", result.assets[0].uri);
+            } else {
+                // Muestra una alerta indicando que la imagen es demasiado grande
+                alert('La imagen seleccionada debe tener dimensiones de 500x500 píxeles o menores.');
+            }
         }
     };
 
-    const deleteCategoria = async (id) => {
+        /*
+        async () => { ... }: Esta función es una función asíncrona, lo que significa que puede contener operaciones asíncronas como la espera (await). En este caso, se utiliza para esperar la respuesta de ImagePicker.launchImageLibraryAsync.
 
+    let result = await ImagePicker.launchImageLibraryAsync({ ... });: Utiliza await para esperar a que se complete la selección de imágenes. La función launchImageLibraryAsync devuelve un objeto result que contiene información sobre la imagen seleccionada.
+
+    mediaTypes: ImagePicker.MediaTypeOptions.All: Permite seleccionar cualquier tipo de archivo multimedia, no solo imágenes.
+
+    allowsEditing: false: No permite la edición de la imagen seleccionada.
+
+    aspect: [8, 8]: Establece una proporción de aspecto de 8:8 para la imagen seleccionada.
+
+    quality: 1: Establece la calidad de la imagen seleccionada en 1 (máxima calidad).
+
+    if (!result.canceled) { ... }: Verifica si la selección de imágenes no fue cancelada por el usuario.
+
+    setImagen(result.assets[0].uri);: Establece la URI de la imagen seleccionada en el estado imagen. Esto probablemente se utiliza para mostrar la imagen seleccionada en la interfaz de usuario.
+
+    setUpdateImg(result.assets[0].uri);: Establece la URI de la imagen seleccionada en el estado updateImg. Puede ser utilizado para realizar actualizaciones específicas cuando la imagen cambia.
+        */
+
+    const deleteCategoria = async (id) => {
         const formData = new FormData();
         formData.append('idCategoria', id);
         try {
@@ -133,7 +218,7 @@ export default function App() {
                 method: 'POST',
                 body: formData
             });
-            const data = response;
+            const data = await response.json();
             if (data.status) {
                 Alert.alert('Categoria Eliminada');
                 getCategorias();
@@ -147,11 +232,13 @@ export default function App() {
         }
     }
 
-    const updateCategoria = async (id) => {
-        //primero tengo que obtener la categoria a editar
-        const formData = new FormData();
-        formData.append('idCategoria', id);
+    /*
+    getUpdateCategoria: Funcion para obtener los datos de la categoria a editar, los cuales son seteados al state
+    */
+    const getUpdateCategoria = async (id) => {
         try {
+            const formData = new FormData();
+            formData.append('idCategoria', id);
             const response = await fetch(`${ip}/coffeeshop/api/services/admin/categoria.php?action=readOne`, {
                 method: 'POST',
                 body: formData
@@ -171,71 +258,73 @@ export default function App() {
         } catch (error) {
             Alert.alert('Ocurrió un error al consultar la categoria a editar');
         }
-
-
     }
 
     const handleUpdate = async () => {
 
-        //console.log("Valor de imagen en el editar: \n", imagen)
-
-        let localUri
-        let fileName = ""
-        let match = ""
-        let type = ""
-
-        // if(updateImg!=null) localUri=updateImg 
-        //else localUri=imagen
-
-        updateImg != null ? localUri = updateImg : localUri = imagen
-
-        //si no se manda imagen
-        //localUri = `${ip}/coffeeshop/api/images/categorias/${imagen}`
-
-        if (localUri == null || localUri == "") {
-            Alert.alert("Selecciona una iamgen")
-        }
-        else {
-            fileName = localUri.split('/').pop()
-            match = /\.(\w+)$/.exec(fileName)
-            type = match ? `image/${match[1]}` : `image`
-        }
-        console.log("Valor de id update: ", idCategoria)
-        console.log("Valor de categoria update: \n", categoria)
-        console.log("Valor de descripcion update: \n", descripcion)
-        const formData = new FormData();
-        formData.append('idCategoria', idCategoria);
-        formData.append('nombreCategoria', categoria);
-        formData.append('descripcionCategoria', descripcion);
-        formData.append('imagenCategoria', {
-            uri: localUri,
-            name: fileName,
-            type
-        });
-
         try {
-            //utilizar la direccion IP del servidor y no localhost
-            const response = await fetch(`${ip}/coffeeshop/api/services/admin/categoria.php?action=updateRow`, {
-                method: 'POST',
-                body: formData
+            //console.log("Valor de imagen en el editar: \n", imagen)
+            let localUri
+            let fileName = ""
+            let match = ""
+            let type = ""
+            // if(updateImg!=null) localUri=updateImg 
+            //else localUri=imagen
+            updateImg != null ? localUri = updateImg : localUri = imagen
+            //si no se manda imagen
+            //localUri = `${ip}/coffeeshop/api/images/categorias/${imagen}`
+            if (localUri == null || localUri == "") {
+                Alert.alert("Selecciona una iamgen")
+            }
+            else {
+                fileName = localUri.split('/').pop()
+                match = /\.(\w+)$/.exec(fileName)
+                type = match ? `image/${match[1]}` : `image`
+            }
+            console.log("Valor de id update: ", idCategoria)
+            console.log("Valor de categoria update: \n", categoria)
+            console.log("Valor de descripcion update: \n", descripcion)
+            console.log("valor de imagen", {
+                uri: localUri,
+                name: fileName,
+                type
+            })
+            const formData = new FormData();
+            formData.append('idCategoria', idCategoria);
+            formData.append('nombreCategoria', categoria);
+            formData.append('descripcionCategoria', descripcion);
+            formData.append('imagenCategoria', {
+                uri: localUri,
+                name: fileName,
+                type
             });
-            //console.log("Despues del Fetch valor response...\n", response.status)
+            //utilizar la direccion IP del servidor y no localhost
+                        const response = await fetch(`${ip}/coffeeshop/api/services/admin/categoria.php?action=updateRow`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Accept': 'application/json'
+                  },
+                body: formData 
+            });
+            console.log("Despues del Fetch valor response...\n", response.status)
             const data = await response.json();
             //console.log("Despues del Fetch...\n", data)
             if (data.status) {
                 Alert.alert('Datos actualizados correctamente');
                 getCategorias();
                 cleanState();
+                setUpdateModalVisible(false)
             } else {
                 Alert.alert('Error', data.error);
             }
+
         } catch (error) {
             Alert.alert('Ocurrió un error al intentar editar la categoria');
             console.log(' eb handelupdate Ocurrió un error al intentar editar la categoria: \n', error);
+            console.log(JSON.stringify(error))
         }
-
     }
-
 
     return (
         <>
@@ -328,7 +417,7 @@ export default function App() {
                                 <Text style={styles.buttonText}>Cargar Imagen</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.button}
-                                onPress={() => handleUpdate()}><Text style={styles.buttonText}>Editar categoria</Text></TouchableOpacity>
+                                onPress={handleUpdate}><Text style={styles.buttonText}>Editar categoria</Text></TouchableOpacity>
                         </View>
 
                         <Pressable
@@ -360,11 +449,12 @@ export default function App() {
                                     <Text >{categoria.nombre_categoria}</Text>
                                     <Text >{categoria.descripcion_categoria}</Text>
                                     <View>
-                                        <TouchableOpacity style={styles.buttonDelete} onPress={() => deleteCategoria(categoria.id_categoria)}>
+                                        <TouchableOpacity style={styles.buttonDelete} 
+                                        onPress={() => deleteCategoria(categoria.id_categoria)}>
                                             <Text style={styles.buttonText}>Eliminar Categoria</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity style={styles.buttonUpdate}
-                                            onPress={() => updateCategoria(categoria.id_categoria)}>
+                                            onPress={() => getUpdateCategoria(categoria.id_categoria)}>
                                             <Text>Editar Categoria</Text>
                                         </TouchableOpacity>
                                     </View>
@@ -374,7 +464,6 @@ export default function App() {
                         </View>)
                 ))}
             </ScrollView>
-
 
             <View style={styles.centeredView}>
                 <TouchableOpacity
@@ -452,7 +541,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 22,
+        marginTop: 5,
     },
     modalView: {
         margin: 20,
@@ -486,7 +575,7 @@ const styles = StyleSheet.create({
     },
     vista: {
         display: "flex",
-        backgroundColor: "green",
+        backgroundColor: "lightblue",
         width: 250,
         padding: 15
     }, buttonDelete: {
